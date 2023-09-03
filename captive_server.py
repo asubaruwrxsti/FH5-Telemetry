@@ -9,57 +9,44 @@ port = 9000
 def main():
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_address = ('', port)
+    server_ip = socket.gethostbyname(socket.gethostname())
     udp_socket.bind(server_address)
-    print(f'Server started. Listening on port {port}...')
+    print(f'Server started. Listening on {server_ip}:{port}...')
 
     with open('format.json', 'r') as f:
         format_data = f.read()
     
     data_format = json.loads(format_data)
-
     try:
         while True:
-            # receive data from client, buffer is 312 bytes
             data, client_address = udp_socket.recvfrom(324)
             try:
                 converted_data = []
-                for i in range(len(data_format)):
-                    field_format = data_format[i]
-                    data_size = field_format['size']
-                    data_type = field_format['type']
-                    data_name = field_format['name']
-                    
-                    converted_value = None
-
-                    if data_type == 'int8':
-                        converted_value = int.from_bytes(data[i * data_size : (i + 1) * data_size], byteorder='little', signed=True)
-                    elif data_type == 'uint8':
-                        converted_value = int.from_bytes(data[i * data_size : (i + 1) * data_size], byteorder='little', signed=False)
-                    elif data_type == 'int16':
-                        converted_value = int.from_bytes(data[i * data_size : (i + 1) * data_size], byteorder='little', signed=True)
-                    elif data_type == 'int32':
-                        converted_value = int.from_bytes(data[i * data_size : (i + 1) * data_size], byteorder='little', signed=True)
-                    elif data_type == 'int64':
-                        converted_value = int.from_bytes(data[i * data_size : (i + 1) * data_size], byteorder='little', signed=True)
-                    elif data_type == 'float':
-                        converted_value = struct.unpack('f', data[i * data_size : (i + 1) * data_size])[0]
-                    elif data_type.startswith('int8@'):
-                        conversion = data_type.split('@')[1]
-                        if conversion == 'boolean':
-                            converted_value = int.from_bytes(data[i * data_size : (i + 1) * data_size], byteorder='little', signed=True) == 1
-                        elif conversion == 'normalize255to1':
-                            converted_value = int.from_bytes(data[i * data_size : (i + 1) * data_size], byteorder='little', signed=True) / 255.0
-                    # Handle other data type conversions here
-
-                    converted_data.append({ 'name': data_name, 'value': converted_value })
-
-                print(json.dumps(converted_data, indent=4))
+                for entry in data_format:
+                    if entry['type'] == 'uint8@boolean':
+                        converted_data.append(bool(struct.unpack('B', data[:entry['size']])[0]))
+                    elif entry['type'] == 'int64':
+                        converted_data.append(struct.unpack('q', data[:entry['size']])[0])
+                    elif entry['type'] == 'float':
+                        converted_data.append(struct.unpack('f', data[:entry['size']])[0])
+                    elif entry['type'] == 'int32':
+                        converted_data.append(struct.unpack('i', data[:entry['size']])[0])
+                    elif entry['type'] == 'int16':
+                        converted_data.append(struct.unpack('h', data[:entry['size']])[0])
+                    elif entry['type'] == 'int8':
+                        converted_data.append(struct.unpack('b', data[:entry['size']])[0])
+                    else:
+                        print(f"Error: Unknown type {entry['type']}")
+                    data = data[entry['size']:]
+                
+                # print the converted data
+                for i in range(len(converted_data)):
+                    print(f"{data_format[i]['name']}: {converted_data[i]}")
 
             except Exception as e:
                 print(f"Error processing data: {e}")
             
             data, client_address = None, None
-            os.system('cls')
             print('-------------------\n\n')
 
     except KeyboardInterrupt:
