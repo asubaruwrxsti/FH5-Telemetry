@@ -1,0 +1,22 @@
+<table>
+    <thead>
+        <tr>
+            <th>Entry Number</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Size</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in data %}
+        <tr>
+            <td>{{ entry.entry_number }}</td>
+            <td>{{ entry.name }}</td>
+            <td>{{ entry.type }}</td>
+            <td>{{ entry.size }}</td>
+            <td>{{ entry.value }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

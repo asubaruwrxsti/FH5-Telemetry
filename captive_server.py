@@ -1,21 +1,21 @@
 import socket
 import json
-import time
-import os
 import struct
+import requests
 
-port = 9000
+captive_port = 9000
+webservice_port = 5000
 
 def main():
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_address = ('', port)
+    server_address = ('', captive_port)
     server_ip = socket.gethostbyname(socket.gethostname())
     udp_socket.bind(server_address)
-    print(f'Server started. Listening on {server_ip}:{port}...')
+    print(f'Server started. Listening on {server_ip}:{captive_port}...')
 
     with open('format.json', 'r') as f:
         format_data = f.read()
-    
+
     data_format = json.loads(format_data)
     try:
         while True:
@@ -38,14 +38,24 @@ def main():
                     else:
                         print(f"Error: Unknown type {entry['type']}")
                     data = data[entry['size']:]
-                
+
+                    converted_data.append({
+                        'name': entry['name'],
+                        'value': converted_data[-1],
+                        'type': entry['type'],
+                        'size': entry['size']
+                    })
+
                 # print the converted data
-                for i in range(len(converted_data)):
-                    print(f"{data_format[i]['name']}: {converted_data[i]}")
+                # for i in range(len(converted_data)):
+                #    print(f"{data_format[i]['name']}: {converted_data[i]}")
+
+                # send the converted data to the web server
+                requests.post('http://localhost:{port}/data'.format(port=webservice_port), json=converted_data)
 
             except Exception as e:
                 print(f"Error processing data: {e}")
-            
+
             data, client_address = None, None
             print('-------------------\n\n')
 
@@ -54,6 +64,7 @@ def main():
 
     finally:
         udp_socket.close()
+
 
 if __name__ == '__main__':
     main()
